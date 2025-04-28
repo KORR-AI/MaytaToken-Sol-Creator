@@ -54,6 +54,39 @@ export default function TokenOptions({ formData, setFormData, fees }: TokenOptio
     }
   }
 
+  // Handle supply change
+  const handleSupplyChange = (value: string) => {
+    // Remove all non-digit characters
+    const digitsOnly = value.replace(/\D/g, "")
+
+    // If empty, set to 0 temporarily (will show placeholder)
+    if (digitsOnly === "") {
+      setFormData({
+        ...formData,
+        supply: 0,
+      })
+      return
+    }
+
+    // Parse the input value as a number
+    const numValue = Number.parseInt(digitsOnly, 10)
+
+    // Check if it's a valid number
+    if (!isNaN(numValue)) {
+      setFormData({
+        ...formData,
+        supply: numValue,
+      })
+    }
+  }
+
+  // Format the supply with commas for display
+  const formatSupply = (value: number): string => {
+    // If value is 0, return empty string to show placeholder
+    if (value === 0) return ""
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -65,6 +98,56 @@ export default function TokenOptions({ formData, setFormData, fees }: TokenOptio
       </div>
 
       <div className="space-y-8">
+        {/* Token Supply Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Token Supply</h3>
+          </div>
+          <Separator className="mb-4" />
+
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="bg-slate-800 p-2 rounded-full">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-primary"
+                >
+                  <circle cx="8" cy="8" r="6" />
+                  <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
+                  <path d="M7 6h1v4" />
+                  <path d="m16.71 13.88.7.71-2.82 2.82" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Total Supply</p>
+                <p className="text-sm text-slate-400 mb-2">
+                  Set the total number of tokens that will be minted. Default is 1,000,000,000 (1 billion).
+                </p>
+                <div className="relative">
+                  <Input
+                    id="supply"
+                    placeholder="1,000,000,000"
+                    value={formatSupply(formData.supply)}
+                    onChange={(e) => handleSupplyChange(e.target.value)}
+                    className="pr-16"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <span className="text-sm text-slate-400">{formData.symbol || "Tokens"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Creator Information Section */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -188,7 +271,7 @@ export default function TokenOptions({ formData, setFormData, fees }: TokenOptio
         {/* Revoke Authorities Section */}
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold mb-2">Revoke Authorities</h3>
+            <h3 className="text-lg font-semibold mb-2">Token Authorities</h3>
             <p className="text-sm text-slate-400 mb-4">
               Solana Token has 3 authorities: Freeze Authority, Mint Authority, and Update Authority. Revoking them
               increases trust with traders and investors. All authorities are revoked by default for maximum trust.
@@ -201,7 +284,7 @@ export default function TokenOptions({ formData, setFormData, fees }: TokenOptio
               <div className="flex items-center justify-between py-3 border-b border-slate-700">
                 <div className="flex items-center space-x-2">
                   <Label htmlFor="revokeFreeze" className="cursor-pointer font-medium">
-                    Revoke Freeze
+                    Revoke Freeze Authority
                   </Label>
                   <TooltipProvider>
                     <Tooltip>
@@ -227,7 +310,7 @@ export default function TokenOptions({ formData, setFormData, fees }: TokenOptio
               <div className="flex items-center justify-between py-3 border-b border-slate-700">
                 <div className="flex items-center space-x-2">
                   <Label htmlFor="revokeMint" className="cursor-pointer font-medium">
-                    Revoke Mint
+                    Revoke Mint Authority
                   </Label>
                   <TooltipProvider>
                     <Tooltip>
@@ -253,7 +336,7 @@ export default function TokenOptions({ formData, setFormData, fees }: TokenOptio
               <div className="flex items-center justify-between py-3">
                 <div className="flex items-center space-x-2">
                   <Label htmlFor="revokeUpdate" className="cursor-pointer font-medium">
-                    Revoke Update
+                    Revoke Update Authority
                   </Label>
                   <TooltipProvider>
                     <Tooltip>

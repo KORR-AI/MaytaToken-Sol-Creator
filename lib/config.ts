@@ -2,13 +2,13 @@
 export const config = {
   // Solana RPC endpoints
   rpc: {
-    // Use Alchemy as the primary RPC endpoint, with fallbacks
-    mainnet: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://solana-mainnet.g.alchemy.com/v2/demo",
+    // Use the environment variable as the primary RPC endpoint, with a fallback
+    mainnet: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://api.mainnet-beta.solana.com",
     // Multiple backup RPC endpoints in case the primary fails
     mainnetBackups: [
-      "https://patient-maximum-morning.solana-mainnet.quiknode.pro/eae6e88ab89efa0fa9b863886ac8712a0c400141/",
       "https://api.mainnet-beta.solana.com",
       "https://rpc.ankr.com/solana",
+      "https://solana.public-rpc.com",
     ],
   },
 

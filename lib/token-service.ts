@@ -18,6 +18,8 @@ import {
   getAssociatedTokenAddressSync,
   createMintToInstruction,
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  createSetAuthorityInstruction,
+  AuthorityType,
 } from "@solana/spl-token"
 
 import {
@@ -41,6 +43,36 @@ function createHttpOnlyConnection(endpoint: string, commitment = "confirmed") {
   })
 }
 
+// Helper function to get a working RPC connection
+async function getWorkingConnection(primaryEndpoint: string, backupEndpoints: string[]): Promise<Connection> {
+  // Try the primary endpoint first
+  try {
+    const conn = createHttpOnlyConnection(primaryEndpoint)
+    // Test the connection with a simple request
+    await conn.getRecentBlockhash()
+    console.log(`Using primary RPC endpoint: ${primaryEndpoint}`)
+    return conn
+  } catch (error) {
+    console.error(`Primary RPC endpoint failed: ${primaryEndpoint}`, error)
+
+    // Try each backup endpoint
+    for (const endpoint of backupEndpoints) {
+      try {
+        const conn = createHttpOnlyConnection(endpoint)
+        // Test the connection
+        await conn.getRecentBlockhash()
+        console.log(`Using backup RPC endpoint: ${endpoint}`)
+        return conn
+      } catch (backupError) {
+        console.error(`Backup RPC endpoint failed: ${endpoint}`, backupError)
+      }
+    }
+
+    // If all endpoints fail, throw an error
+    throw new Error("All RPC endpoints failed. Please try again later.")
+  }
+}
+
 export async function createToken({
   connection,
   wallet,
@@ -51,8 +83,8 @@ export async function createToken({
     throw new Error("Wallet not connected")
   }
 
-  // Create a new HTTP-only connection to avoid WebSocket issues
-  const httpConnection = createHttpOnlyConnection(config.rpc.mainnet, config.connection.commitment)
+  // Get a working connection
+  const httpConnection = await getWorkingConnection(config.rpc.mainnet, config.rpc.mainnetBackups)
 
   try {
     // Calculate fees
@@ -184,13 +216,19 @@ export async function createToken({
     // Instruction to initialize the MetadataPointer Extension
     transaction.add(createInitializeMetadataPointerInstruction(mint, wallet.publicKey, mint, TOKEN_2022_PROGRAM_ID))
 
+    // Determine freeze authority based on revokeFreeze option
+    // If revokeFreeze is true, set to null, otherwise use wallet.publicKey
+    const freezeAuthority = tokenData.options.revokeFreeze ? null : wallet.publicKey
+
     // Instruction to initialize Mint Account data
+    // We need wallet.publicKey as the mintAuthority parameter initially
+    // because we need it to mint tokens initially
     transaction.add(
       createInitializeMintInstruction(
         mint,
         tokenData.decimals,
-        wallet.publicKey,
-        null, // Set freeze authority to null
+        wallet.publicKey, // Always need mint authority initially to mint tokens
+        freezeAuthority, // Set freeze authority based on user choice
         TOKEN_2022_PROGRAM_ID,
       ),
     )
@@ -200,7 +238,7 @@ export async function createToken({
       createInitializeInstruction({
         programId: TOKEN_2022_PROGRAM_ID,
         metadata: mint,
-        updateAuthority: wallet.publicKey,
+        updateAuthority: wallet.publicKey, // Need this initially to set fields
         mint: mint,
         mintAuthority: wallet.publicKey,
         name: metaData.name,
@@ -266,21 +304,43 @@ export async function createToken({
     )
 
     // Calculate the mint amount based on decimals
-    // For 1 billion tokens with decimals, we need to multiply by 10^decimals
-    const mintAmount = BigInt(1_000_000_000) * BigInt(10 ** tokenData.decimals)
-    console.log(`Minting ${mintAmount} tokens (${1_000_000_000} with ${tokenData.decimals} decimals)`)
+    // Use the custom supply value from tokenData
+    const mintAmount = BigInt(tokenData.supply) * BigInt(10 ** tokenData.decimals)
+    console.log(`Minting ${mintAmount} tokens (${tokenData.supply} with ${tokenData.decimals} decimals)`)
 
     // Add instruction to mint tokens to the user's account
     tokenAccountTx.add(
-      createMintToInstruction(
-        mint,
-        tokenAccountAddress,
-        wallet.publicKey,
-        mintAmount, // Mint 1 billion tokens adjusted for decimals
-        [],
-        TOKEN_2022_PROGRAM_ID,
-      ),
+      createMintToInstruction(mint, tokenAccountAddress, wallet.publicKey, mintAmount, [], TOKEN_2022_PROGRAM_ID),
     )
+
+    // If revokeMint is true, add instruction to set mint authority to null
+    if (tokenData.options.revokeMint) {
+      console.log("Adding instruction to revoke mint authority")
+      tokenAccountTx.add(
+        createSetAuthorityInstruction(
+          mint, // Token mint account
+          wallet.publicKey, // Current authority
+          AuthorityType.MintTokens, // Authority type: MintTokens
+          null, // New authority (null to revoke)
+          [], // Multi-signature signers (empty for single signer)
+          TOKEN_2022_PROGRAM_ID, // Program ID
+        ),
+      )
+    }
+
+    // If revokeUpdate is true, add instruction to set update authority to null
+    if (tokenData.options.revokeUpdate) {
+      console.log("Adding instruction to revoke update authority")
+      tokenAccountTx.add(
+        createUpdateFieldInstruction({
+          programId: TOKEN_2022_PROGRAM_ID,
+          metadata: mint,
+          updateAuthority: wallet.publicKey,
+          field: "updateAuthority",
+          value: "null", // Special value to remove update authority
+        }),
+      )
+    }
 
     // Sign with the mint keypair first
     transaction.partialSign(mintKeypair)

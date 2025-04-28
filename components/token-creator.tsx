@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
 import { useConnection } from "@solana/wallet-adapter-react"
-import { LAMPORTS_PER_SOL } from "@solana/web3.js"
+import { LAMPORTS_PER_SOL, Connection } from "@solana/web3.js"
 import TokenNameSymbol from "@/components/token-steps/token-name-symbol"
 import TokenImageDescription from "@/components/token-steps/token-image-description"
 import TokenOptions from "@/components/token-steps/token-options"
@@ -44,13 +44,14 @@ export default function TokenCreator() {
   const intervalsRef = useRef<NodeJS.Timeout[]>([])
   const timeoutsRef = useRef<NodeJS.Timeout[]>([])
 
-  // Update the initial formData state to include the new social link fields
+  // Update the initial formData state to include the supply field and set default authorities
   const [formData, setFormData] = useState<TokenFormData>({
     name: "",
     symbol: "",
     description: "",
     image: null,
     decimals: 9,
+    supply: 1000000000, // Default to 1 billion
     options: {
       // Creator information - all unselected by default
       addCreatorInfo: false,
@@ -111,25 +112,48 @@ export default function TokenCreator() {
     }
   }, [cleanupTimers])
 
-  // Fetch balance when wallet connects - with error handling
+  // Fetch balance when wallet connects - with improved fallback mechanism
   const fetchBalance = useCallback(async () => {
-    if (wallet.publicKey) {
-      try {
-        setIsBalanceUpdating(true)
-        setConnectionError(null)
-        const balance = await connection.getBalance(wallet.publicKey)
-        setBalance(balance / LAMPORTS_PER_SOL)
-        setTimeout(() => setIsBalanceUpdating(false), 1000) // Show pulse effect for 1 second
-      } catch (error) {
-        console.error("Error fetching balance:", error)
-        setConnectionError("Connection error. Using cached balance.")
-        setIsBalanceUpdating(false)
-      }
-    } else {
+    if (!wallet.publicKey) {
       setBalance(null)
       setConnectionError(null)
+      return
     }
-  }, [wallet.publicKey, connection])
+
+    setIsBalanceUpdating(true)
+    setConnectionError(null)
+
+    // Try all RPC endpoints in sequence until one works
+    const endpoints = [config.rpc.mainnet, ...config.rpc.mainnetBackups]
+    let succeeded = false
+
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Trying to fetch balance using RPC endpoint: ${endpoint}`)
+        // Create a new connection for each attempt to avoid any cached issues
+        const conn = new Connection(endpoint, {
+          commitment: config.connection.commitment,
+          confirmTransactionInitialTimeout: config.connection.confirmTransactionInitialTimeout,
+        })
+
+        const balance = await conn.getBalance(wallet.publicKey)
+        setBalance(balance / LAMPORTS_PER_SOL)
+        succeeded = true
+        console.log(`Successfully fetched balance using RPC: ${endpoint}`)
+        break // Exit the loop if successful
+      } catch (error) {
+        console.error(`Error with RPC ${endpoint}:`, error)
+        // Continue to the next endpoint
+      }
+    }
+
+    if (!succeeded) {
+      console.error("All RPC endpoints failed to fetch balance")
+      setConnectionError("All RPC endpoints failed. Please try again later.")
+    }
+
+    setTimeout(() => setIsBalanceUpdating(false), 1000)
+  }, [wallet.publicKey, config.connection.commitment, config.connection.confirmTransactionInitialTimeout, config.rpc])
 
   // Update balance when wallet changes
   useEffect(() => {
@@ -142,7 +166,7 @@ export default function TokenCreator() {
       // Clean up interval on unmount
       return () => clearInterval(intervalId)
     }
-  }, [wallet.publicKey, connection, fetchBalance])
+  }, [wallet.publicKey, fetchBalance])
 
   const handleNext = () => {
     setCurrentStep((prev) => Math.min(prev + 1, 4))
@@ -188,10 +212,11 @@ export default function TokenCreator() {
       return
     }
 
-    if (!isConfigLoaded) {
+    // Ensure supply is not 0
+    if (formData.supply === 0) {
       toast({
-        title: "Configuration not loaded",
-        description: "Please wait for the configuration to load before creating a token",
+        title: "Invalid supply",
+        description: "Please enter a valid token supply amount",
         variant: "destructive",
       })
       return
@@ -209,8 +234,6 @@ export default function TokenCreator() {
       })
       return
     }
-
-    // Rest of the function remains the same...
 
     // Clean up any existing timers
     cleanupTimers()
@@ -257,13 +280,25 @@ export default function TokenCreator() {
           console.log("Metadata URI:", metadataUri)
           console.log("Metadata Gateway URL:", metadataGatewayUrl)
           console.log("Image Gateway URL:", imageGatewayUrl)
+
+          toast({
+            title: "IPFS Upload Successful",
+            description: "Your image and metadata have been uploaded to IPFS.",
+            variant: "default",
+          })
         } catch (error) {
           console.error("Error uploading to IPFS:", error)
           toast({
-            title: "Error uploading image",
-            description: "Failed to upload image to IPFS. Creating token without image.",
+            title: "IPFS Upload Failed",
+            description: "Failed to upload to IPFS. Please check your API keys and try again.",
             variant: "destructive",
           })
+
+          // Stop the token creation process
+          setIsCreatingToken(false)
+          setIsLoading(false)
+          cleanupTimers()
+          return
         }
       }
 

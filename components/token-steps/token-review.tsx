@@ -11,7 +11,7 @@ interface TokenReviewProps {
 }
 
 export default function TokenReview({ formData, fees }: TokenReviewProps) {
-  const { name, symbol, description, decimals, image, options } = formData
+  const { name, symbol, description, decimals, image, options, supply } = formData
 
   return (
     <div className="space-y-6">
@@ -47,6 +47,11 @@ export default function TokenReview({ formData, fees }: TokenReviewProps) {
               <div>
                 <p className="text-sm text-slate-400">Decimals</p>
                 <p className="font-medium">{decimals}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-400">Total Supply</p>
+                <p className="font-medium">{supply.toLocaleString()} tokens</p>
               </div>
             </div>
           </div>

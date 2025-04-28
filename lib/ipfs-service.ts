@@ -19,6 +19,7 @@ export function ipfsUriToGatewayUrl(ipfsUri: string): string {
   return ipfsUri
 }
 
+// Client-side implementation for IPFS upload
 export async function uploadToIPFS(
   imageFile: File,
   metadata: { name: string; symbol: string; description: string },
@@ -26,8 +27,6 @@ export async function uploadToIPFS(
 ): Promise<IPFSUploadResult> {
   try {
     console.log("Starting IPFS upload with Pinata...")
-    console.log("API Key:", process.env.NEXT_PUBLIC_PINATA_API_KEY ? "Available" : "Missing")
-    console.log("Secret Key:", process.env.NEXT_PUBLIC_PINATA_SECRET_API_KEY ? "Available" : "Missing")
 
     // Create form data for the image upload
     const imageFormData = new FormData()
@@ -38,6 +37,12 @@ export async function uploadToIPFS(
       name: `${metadata.name}-image`,
     })
     imageFormData.append("pinataMetadata", pinataMetadata)
+
+    // Set options
+    const pinataOptions = JSON.stringify({
+      cidVersion: 1,
+    })
+    imageFormData.append("pinataOptions", pinataOptions)
 
     // Upload image to Pinata
     const imageResponse = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
@@ -69,11 +74,11 @@ export async function uploadToIPFS(
       name: metadata.name,
       symbol: metadata.symbol,
       description: metadata.description,
-      image: imageGatewayUrl, // Use direct gateway URL for better compatibility
+      image: `ipfs://${imageIpfsHash}`,
       properties: {
         files: [
           {
-            uri: imageGatewayUrl,
+            uri: `ipfs://${imageIpfsHash}`,
             type: "image/png",
           },
         ],
@@ -127,17 +132,6 @@ export async function uploadToIPFS(
     }
   } catch (error) {
     console.error("Error uploading to IPFS:", error)
-
-    // Return the fallback IPFS hash if upload fails
-    const fallbackHash = "QmP8aQ7VQydU1MYMDeizih6RSEei1tfNHUaZUMMQfJTu89"
-    const fallbackUri = `ipfs://${fallbackHash}`
-    const fallbackGatewayUrl = `${config.ipfsGateway}${fallbackHash}`
-
-    return {
-      imageUri: fallbackUri,
-      imageGatewayUrl: fallbackGatewayUrl,
-      metadataUri: fallbackUri,
-      metadataGatewayUrl: fallbackGatewayUrl,
-    }
+    throw error
   }
 }

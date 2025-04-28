@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Coins } from "lucide-react"
 import type { TokenFormData } from "@/lib/types"
 
 interface TokenBasicInfoProps {
@@ -12,6 +13,39 @@ interface TokenBasicInfoProps {
 }
 
 export default function TokenBasicInfo({ formData, setFormData }: TokenBasicInfoProps) {
+  // Handle supply change
+  const handleSupplyChange = (value: string) => {
+    // Remove all non-digit characters
+    const digitsOnly = value.replace(/\D/g, "")
+
+    // If empty, set to 0 temporarily (will show placeholder)
+    if (digitsOnly === "") {
+      setFormData({
+        ...formData,
+        supply: 0,
+      })
+      return
+    }
+
+    // Parse the input value as a number
+    const numValue = Number.parseInt(digitsOnly, 10)
+
+    // Check if it's a valid number
+    if (!isNaN(numValue)) {
+      setFormData({
+        ...formData,
+        supply: numValue,
+      })
+    }
+  }
+
+  // Format the supply with commas for display
+  const formatSupply = (value: number): string => {
+    // If value is 0, return empty string to show placeholder
+    if (value === 0) return ""
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+  }
+
   const handleChange = (field: keyof Omit<TokenFormData, "image" | "options">, value: string | number) => {
     setFormData({
       ...formData,
@@ -52,6 +86,27 @@ export default function TokenBasicInfo({ formData, setFormData }: TokenBasicInfo
             required
           />
           <p className="text-xs text-slate-400">A short ticker symbol for your token (e.g. "SOL")</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="supply" className="flex items-center gap-2">
+            <Coins className="h-4 w-4" /> Total Supply
+          </Label>
+          <div className="relative">
+            <Input
+              id="supply"
+              placeholder="1,000,000,000"
+              value={formatSupply(formData.supply)}
+              onChange={(e) => handleSupplyChange(e.target.value)}
+              className="pr-16"
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <span className="text-sm text-slate-400">{formData.symbol || "Tokens"}</span>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400">
+            The total number of tokens that will be created. Default is 1,000,000,000 (1 billion).
+          </p>
         </div>
 
         <div className="space-y-2">

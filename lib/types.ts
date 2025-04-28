@@ -3,6 +3,7 @@ export interface TokenFormData {
   symbol: string
   description: string
   decimals: number
+  supply: number
   image: File | null
   options: {
     // Creator information
@@ -16,7 +17,7 @@ export interface TokenFormData {
     discordLink: string
     telegramLink: string
 
-    // Revoke authorities (unselected by default)
+    // Revoke authorities (all selected by default for maximum trust)
     revokeFreeze: boolean
     revokeMint: boolean
     revokeUpdate: boolean

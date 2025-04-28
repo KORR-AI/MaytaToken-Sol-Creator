@@ -59,12 +59,12 @@
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
     "@solana/web3.js": "latest",
-    "@solana/spl-token": "latest",
-    "@solana/spl-token-metadata": "latest",
+    "@solana/wallet-adapter-base": "latest",
     "@solana/wallet-adapter-react": "latest",
     "@solana/wallet-adapter-react-ui": "latest",
-    "@solana/wallet-adapter-base": "latest",
-    "@solana/wallet-adapter-wallets": "latest"
+    "@solana/wallet-adapter-wallets": "latest",
+    "@solana/spl-token": "latest",
+    "@solana/spl-token-metadata": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
