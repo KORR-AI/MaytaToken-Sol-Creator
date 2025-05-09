@@ -42,6 +42,31 @@ export default function TokenOptions({ formData, setFormData, fees }: TokenOptio
           telegramLink: "",
         },
       })
+    }
+    // Special handling for revokeUpdate toggle
+    else if (option === "revokeUpdate") {
+      // When revokeUpdate changes, update both revokeUpdate and updateAuthorityNA
+      setFormData({
+        ...formData,
+        options: {
+          ...formData.options,
+          [option]: value,
+          // If revokeUpdate is true, updateAuthorityNA should also be true
+          updateAuthorityNA: value === true ? true : formData.options.updateAuthorityNA,
+        },
+      })
+    }
+    // Special handling for updateAuthorityNA toggle
+    else if (option === "updateAuthorityNA") {
+      setFormData({
+        ...formData,
+        options: {
+          ...formData.options,
+          [option]: value,
+          // If updateAuthorityNA is true, revokeUpdate should also be true
+          revokeUpdate: value === true ? true : formData.options.revokeUpdate,
+        },
+      })
     } else {
       // Normal handling for other options
       setFormData({
@@ -86,6 +111,8 @@ export default function TokenOptions({ formData, setFormData, fees }: TokenOptio
     if (value === 0) return ""
     return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
   }
+
+  const { options } = formData
 
   return (
     <div className="space-y-8">

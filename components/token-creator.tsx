@@ -68,6 +68,8 @@ export default function TokenCreator() {
       revokeFreeze: true,
       revokeMint: true,
       revokeUpdate: true,
+      // Set update authority to N/A by default
+      updateAuthorityNA: true,
     },
   })
 
@@ -221,6 +223,20 @@ export default function TokenCreator() {
       })
       return
     }
+
+    // Add this additional validation to ensure supply is properly formatted
+    // Validate supply is a reasonable number
+    if (formData.supply <= 0 || formData.supply > Number.MAX_SAFE_INTEGER) {
+      toast({
+        title: "Invalid supply",
+        description: "Please enter a valid token supply between 1 and " + Number.MAX_SAFE_INTEGER,
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Log the supply value for debugging
+    console.log("Creating token with supply:", formData.supply, "and decimals:", formData.decimals)
 
     // Validate that we have a valid RPC URL
     if (
@@ -479,7 +495,7 @@ export default function TokenCreator() {
                 {/* Glowing effect */}
                 <div
                   className={`absolute inset-0 bg-green-500/20 rounded-lg blur-sm ${
-                    isBalanceUpdating ? "opacity-100" : "opacity-0"
+                    isBalanceUpdating ? "opacity-100" : ""
                   } transition-opacity duration-1000`}
                 ></div>
               </CardContent>
@@ -487,7 +503,7 @@ export default function TokenCreator() {
             {/* Pulsing ring effect */}
             <div
               className={`absolute inset-0 rounded-lg ring-2 ring-green-500/50 ${
-                isBalanceUpdating ? "animate-ping opacity-75" : "opacity-0"
+                isBalanceUpdating ? "animate-ping opacity-75" : ""
               } transition-opacity duration-1000`}
             ></div>
           </div>

@@ -21,6 +21,8 @@ export interface TokenFormData {
     revokeFreeze: boolean
     revokeMint: boolean
     revokeUpdate: boolean
+    // Add a new field to track if update authority is N/A
+    updateAuthorityNA: boolean
   }
 }
 

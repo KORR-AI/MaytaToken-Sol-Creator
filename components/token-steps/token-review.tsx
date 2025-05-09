@@ -51,7 +51,9 @@ export default function TokenReview({ formData, fees }: TokenReviewProps) {
 
               <div>
                 <p className="text-sm text-slate-400">Total Supply</p>
-                <p className="font-medium">{supply.toLocaleString()} tokens</p>
+                <p className="font-medium text-primary">
+                  {supply.toLocaleString()} {symbol || "tokens"}
+                </p>
               </div>
             </div>
           </div>
@@ -133,7 +135,11 @@ export default function TokenReview({ formData, fees }: TokenReviewProps) {
                   <X className="h-4 w-4 text-amber-500 mr-2" />
                 )}
                 <span className={options.revokeUpdate ? "text-white" : "text-amber-400"}>
-                  {options.revokeUpdate ? "Update Authority Revoked" : "Update Authority Retained (+0.1 SOL)"}
+                  {options.updateAuthorityNA
+                    ? "Update Authority N/A"
+                    : options.revokeUpdate
+                      ? "Update Authority Revoked"
+                      : "Update Authority Retained (+0.1 SOL)"}
                 </span>
               </div>
             </div>
@@ -216,6 +222,9 @@ export default function TokenReview({ formData, fees }: TokenReviewProps) {
                 <Badge variant="outline" className="mt-1">
                   {symbol || "SYM"}
                 </Badge>
+                <p className="mt-2 text-sm text-slate-300">
+                  Total Supply: <span className="font-semibold text-primary">{supply.toLocaleString()}</span>
+                </p>
               </div>
             </div>
           </div>

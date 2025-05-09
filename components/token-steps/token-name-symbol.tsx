@@ -36,12 +36,16 @@ export default function TokenNameSymbol({ formData, setFormData }: TokenNameSymb
     // Parse the input value as a number
     const numValue = Number.parseInt(digitsOnly, 10)
 
-    // Check if it's a valid number
-    if (!isNaN(numValue)) {
+    // Check if it's a valid number and within reasonable limits
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= Number.MAX_SAFE_INTEGER) {
       setFormData({
         ...formData,
         supply: numValue,
       })
+      // Log the updated supply for debugging
+      console.log("Supply updated to:", numValue)
+    } else {
+      console.warn("Invalid supply value:", numValue)
     }
   }
 

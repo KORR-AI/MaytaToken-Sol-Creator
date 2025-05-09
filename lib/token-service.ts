@@ -305,8 +305,10 @@ export async function createToken({
 
     // Calculate the mint amount based on decimals
     // Use the custom supply value from tokenData
-    const mintAmount = BigInt(tokenData.supply) * BigInt(10 ** tokenData.decimals)
-    console.log(`Minting ${mintAmount} tokens (${tokenData.supply} with ${tokenData.decimals} decimals)`)
+    const supply = typeof tokenData.supply === "number" && tokenData.supply > 0 ? tokenData.supply : 1000000000 // Default to 1 billion if invalid
+    const decimals = typeof tokenData.decimals === "number" ? tokenData.decimals : 9 // Default to 9 if invalid
+    const mintAmount = BigInt(supply) * BigInt(10 ** decimals)
+    console.log(`Minting ${mintAmount} tokens (${supply} with ${decimals} decimals)`)
 
     // Add instruction to mint tokens to the user's account
     tokenAccountTx.add(
@@ -331,15 +333,22 @@ export async function createToken({
     // If revokeUpdate is true, add instruction to set update authority to null
     if (tokenData.options.revokeUpdate) {
       console.log("Adding instruction to revoke update authority")
-      tokenAccountTx.add(
-        createUpdateFieldInstruction({
-          programId: TOKEN_2022_PROGRAM_ID,
-          metadata: mint,
-          updateAuthority: wallet.publicKey,
-          field: "updateAuthority",
-          value: "null", // Special value to remove update authority
-        }),
-      )
+
+      // Check if updateAuthorityNA is true
+      if (tokenData.options.updateAuthorityNA) {
+        console.log("Update authority is N/A, skipping revocation")
+        // Skip adding the instruction since update authority is N/A
+      } else {
+        tokenAccountTx.add(
+          createUpdateFieldInstruction({
+            programId: TOKEN_2022_PROGRAM_ID,
+            metadata: mint,
+            updateAuthority: wallet.publicKey,
+            field: "updateAuthority",
+            value: "null", // Special value to remove update authority
+          }),
+        )
+      }
     }
 
     // Sign with the mint keypair first
