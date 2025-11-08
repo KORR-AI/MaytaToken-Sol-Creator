@@ -21,10 +21,10 @@ export const config = {
   },
 
   // Fee receiver wallet address
-  feeReceiver: "2aVRieq358DxwEoZk1CK9CgdexM89CYnAJCfdm1k6baK",
+  feeReceiver: "3PDFFh4BdtSyCZ5vBmoSYfA2UJxa7Ribcsx3i6U691e1",
 
   // Base fee in SOL (reduced for testing)
-  baseFee: 0.01,
+  baseFee: 0.001,
 
   // Fee per option in SOL
   optionFee: 0.1,
